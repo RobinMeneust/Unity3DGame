@@ -119,32 +119,32 @@ public class Planet : MonoBehaviour
             Debug.Log("chunksToSetInactive["+i+"]=  "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z);
         }*/
 
-        int T=0;
-
         for(int x=chunkX-viewDistance; x<=chunkX+viewDistance; x++)
         {
             for(int y=chunkY-viewDistance; y<=chunkY+viewDistance; y++)
             {
                 for(int z=chunkZ-viewDistance; z<=chunkZ+viewDistance; z++)
                 {
-                    Debug.Log("END_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
+                    //Debug.Log("START_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
                     intVector3 c = new intVector3(x, y, z);
                     if(IsChunkInWorld(x,y,z)){
                         if(chunks[x,y,z]==null){ //Has not be created
-                            Debug.Log("not yet created but will be : "+x+", "+y+", "+z+")");
+                            //Debug.Log("not yet created but will be : "+x+", "+y+", "+z+")");
                             chunksToCreate.Add(c);
-                            chunks[x,y,z] = new Chunk(c, this);
                             activeChunks.Add(c);
                         }
                         else if(!chunks[x,y,z].isActive){ //It's not currently active but has be set active
-                            Debug.Log("not yet active but will be : "+x+", "+y+", "+z+")");
+                            //Debug.Log("not yet active but will be : "+x+", "+y+", "+z+")");
                             activeChunks.Add(c);
                             chunks[x,y,z].isActive=true;
+                        }
+                        else{
+                            activeChunks.Add(c);
                         }
 
                         for(int i=0; i<chunksToSetInactive.Count; i++){
                             //Debug.Log("COUNT : "+chunksToSetInactive.Count);
-                            if(chunksToSetInactive[i].x==c.x && chunksToSetInactive[i].y==c.y && chunksToSetInactive[i].z==c.z){
+                            if(chunksToSetInactive[i].x==x && chunksToSetInactive[i].y==y && chunksToSetInactive[i].z==z){
                                 //Debug.Log("removed from inactive : "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z+")"+"    i=  "+i+"  T=  "+T+"    c=  "+c.intVector3ToVector3());
                                 chunksToSetInactive.RemoveAt(i);
                                 break;
@@ -152,12 +152,11 @@ public class Planet : MonoBehaviour
                             //else
                                 //Debug.Log("DIFFERENT coord=  "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z+"    i=  "+i+"  T=  "+T+c.intVector3ToVector3());
                         }
-                        //T++;
                     }
                     //else
                         //Debug.Log("OUT");
                     //Debug.Log("T=  "+T);
-                    Debug.Log("END_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
+                    //Debug.Log("END_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
                 }
             }
         }
@@ -165,18 +164,17 @@ public class Planet : MonoBehaviour
         foreach(intVector3 c in chunksToSetInactive){
 
             if(chunks[c.x, c.y, c.z]==null){
-                Debug.Log("created before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
+                //Debug.Log("created before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
                 chunks[c.x, c.y, c.z]=new Chunk(c, this);
                 for(int i=0; i<chunksToCreate.Count; i++){
                     if(chunksToCreate[i].x==c.x && chunksToCreate[i].y==c.y && chunksToCreate[i].z==c.z){
                         chunksToCreate.RemoveAt(i);
-                        Debug.Log("removed from ToCreate list before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
+                        //Debug.Log("removed from ToCreate list before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
                     }
                 }
             }
-            Debug.Log("STATE:  "+chunks[c.x, c.y, c.z].isActive+"  set to inactive : "+c.x+", "+c.y+", "+c.z+")");
+            //Debug.Log("STATE:  "+chunks[c.x, c.y, c.z].isActive+"  set to inactive : "+c.x+", "+c.y+", "+c.z+")");
             chunks[c.x, c.y, c.z].isActive=false;
-            Debug.Log("STATE:  "+chunks[c.x, c.y, c.z].isActive+"  set to inactive : "+c.x+", "+c.y+", "+c.z+")");
         }
     }
 
@@ -200,10 +198,15 @@ public class Planet : MonoBehaviour
 
     public void DestroyVoxel(Vector3 pos)
     {
-        intVector3 chunkCoord=GetChunkCoordFromPos(pos);
-        intVector3 posVoxelInChunk=GetVoxelCoordRelativeToChunk(pos, chunkCoord);
+        if(CheckVoxelTypeIndex(pos)!=4){//bedrock
+            intVector3 chunkCoord=GetChunkCoordFromPos(pos);
+            intVector3 posVoxelInChunk=GetVoxelCoordRelativeToChunk(pos, chunkCoord);
+            chunks[chunkCoord.x,chunkCoord.y,chunkCoord.z].EditVoxel(posVoxelInChunk, 0);//air
+        }
+        else{
+            Debug.Log("Bedrock can't be broken");
+        }
         
-        chunks[chunkCoord.x,chunkCoord.y,chunkCoord.z].EditVoxel(posVoxelInChunk, 0);//air
 
         /*
         if(chunks[posChunk.x,posChunk.y,posChunk.z]!=null){

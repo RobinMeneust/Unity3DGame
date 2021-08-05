@@ -15,12 +15,15 @@ public class Chunk
     private bool m_isActive;
     public bool isActive{
         set{
-            m_isActive=value;
-            if(chunkObject!=null)
+            if(chunkObject!=null){
+                m_isActive=value;
                 chunkObject.SetActive(value);
+            }
+            else
+                Debug.Log("ERROR : (with Chunk.isActive) chunkObject is null");
         }
 
-        get{ return chunkObject.activeSelf; }
+        get{ return m_isActive; }
     }
 
     List<Vector3> vertices = new List<Vector3>();
@@ -30,10 +33,10 @@ public class Chunk
     
     int verticesIndex=0;
 
-    public Chunk(intVector3 _coord, Planet _planet)
+    public Chunk(intVector3 _coord, Planet _planet, bool _isActive=true)
     {
         chunkObject = new GameObject();
-        m_isActive=true;
+        m_isActive=_isActive;
         meshFilter = chunkObject.AddComponent<MeshFilter>();
         meshRenderer = chunkObject.AddComponent<MeshRenderer>();
 

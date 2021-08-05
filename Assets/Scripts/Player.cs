@@ -73,7 +73,7 @@ public class Player : MonoBehaviour
 
         GetVelocity();
         if(inside()){
-            transform.Translate(upVectorPlayer, Space.World);
+            //transform.Translate(upVectorPlayer, Space.World);
             Debug.Log("IS INSIDE A BLOCK");
         }
         if(jumpRequest)
