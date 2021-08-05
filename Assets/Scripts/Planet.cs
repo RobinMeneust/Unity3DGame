@@ -63,15 +63,15 @@ public class Planet : MonoBehaviour
         GeneratePlanet();
         spawn=new Vector3(planetTotalPlanetRadiusInBlocks, planetTotalPlanetDiameterInBlocks-1, planetTotalPlanetRadiusInBlocks);
         player.transform.position=spawn;
-        lastPlayerChunkPos=GetintVector3FromPos(spawn);
+        lastPlayerChunkPos=GetChunkCoordFromPos(spawn);
     }
 
     // Update is called once per frame
     void Update()
     {
-        playerChunkPos = GetintVector3FromPos(player.transform.position);
+        playerChunkPos = GetChunkCoordFromPos(player.transform.position);
         //Player is moving
-        if(lastPlayerChunkPos!=playerChunkPos) 
+        if(lastPlayerChunkPos.x!=playerChunkPos.x || lastPlayerChunkPos.y!=playerChunkPos.y || lastPlayerChunkPos.z!=playerChunkPos.z) 
         {
             UpdateChunks();
             lastPlayerChunkPos=playerChunkPos;
@@ -81,14 +81,14 @@ public class Planet : MonoBehaviour
             StartCoroutine(CreateChunks());
     }
 
-    public intVector3 GetintVector3FromPos(Vector3 pos)
+    public intVector3 GetChunkCoordFromPos(Vector3 pos)
     {
         return new intVector3(Mathf.FloorToInt(pos.x/Data.chunkWidth), Mathf.FloorToInt(pos.y/Data.chunkHeight), Mathf.FloorToInt(pos.z/Data.chunkWidth));
     }
 
-    public intVector3 GetVoxelCoordRelativeToChunk(Vector3 pos, intVector3 posChunk)
+    public intVector3 GetVoxelCoordRelativeToChunk(Vector3 pos, intVector3 chunkCoord)
     {
-        return new intVector3(Mathf.FloorToInt(pos.x-Data.chunkWidth*posChunk.x), Mathf.FloorToInt(pos.y-Data.chunkHeight*posChunk.y), Mathf.FloorToInt(pos.z-Data.chunkWidth*posChunk.z));
+        return new intVector3(Mathf.FloorToInt(pos.x-Data.chunkWidth*chunkCoord.x), Mathf.FloorToInt(pos.y-Data.chunkHeight*chunkCoord.y), Mathf.FloorToInt(pos.z-Data.chunkWidth*chunkCoord.z));
     }
 
     IEnumerator CreateChunks()
@@ -112,7 +112,14 @@ public class Planet : MonoBehaviour
         int chunkZ=Mathf.FloorToInt(player.transform.position.z/Data.chunkWidth);
         //Debug.Log("Player chunk coord : "+chunkX+", "+chunkY+", "+chunkZ+")");
         
-        List<intVector3> inactiveChunks = new List<intVector3>(activeChunks); //Chunks that have to be set inactive
+        List<intVector3> chunksToSetInactive = new List<intVector3>(activeChunks); //Chunks that have to be set inactive
+        activeChunks.Clear();
+
+        /*for(int i=0; i<chunksToSetInactive.Count; i++){
+            Debug.Log("chunksToSetInactive["+i+"]=  "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z);
+        }*/
+
+        int T=0;
 
         for(int x=chunkX-viewDistance; x<=chunkX+viewDistance; x++)
         {
@@ -120,42 +127,57 @@ public class Planet : MonoBehaviour
             {
                 for(int z=chunkZ-viewDistance; z<=chunkZ+viewDistance; z++)
                 {
-                    intVector3 intVector3 = new intVector3(x, y, z);
-                    //Debug.Log("coord ("+x+", "+y+", "+z+")"+test);
+                    Debug.Log("END_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
+                    intVector3 c = new intVector3(x, y, z);
                     if(IsChunkInWorld(x,y,z)){
                         if(chunks[x,y,z]==null){ //Has not be created
-                            //Debug.Log("not yet created but will be : "+x+", "+y+", "+z+")"+test);
-                            chunksToCreate.Add(intVector3);
-                            //chunks[x,y,z] = new Chunk(intVector3, this);
-                            activeChunks.Add(intVector3);
+                            Debug.Log("not yet created but will be : "+x+", "+y+", "+z+")");
+                            chunksToCreate.Add(c);
+                            chunks[x,y,z] = new Chunk(c, this);
+                            activeChunks.Add(c);
                         }
                         else if(!chunks[x,y,z].isActive){ //It's not currently active but has be set active
-                            //Debug.Log("not yet active but will be : "+x+", "+y+", "+z+")"+test);
-                            activeChunks.Add(intVector3);
+                            Debug.Log("not yet active but will be : "+x+", "+y+", "+z+")");
+                            activeChunks.Add(c);
                             chunks[x,y,z].isActive=true;
                         }
-                        
-                        for(int i=0; i<inactiveChunks.Count; i++){
-                            if(inactiveChunks[i].x==intVector3.x && inactiveChunks[i].y==intVector3.y && inactiveChunks[i].z==intVector3.z){
-                                //Debug.Log("removed from inactive : "+inactiveChunks[i].x+", "+inactiveChunks[i].y+", "+inactiveChunks[i].z+")"+test);
-                                inactiveChunks.RemoveAt(i);
+
+                        for(int i=0; i<chunksToSetInactive.Count; i++){
+                            //Debug.Log("COUNT : "+chunksToSetInactive.Count);
+                            if(chunksToSetInactive[i].x==c.x && chunksToSetInactive[i].y==c.y && chunksToSetInactive[i].z==c.z){
+                                //Debug.Log("removed from inactive : "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z+")"+"    i=  "+i+"  T=  "+T+"    c=  "+c.intVector3ToVector3());
+                                chunksToSetInactive.RemoveAt(i);
+                                break;
                             }
+                            //else
+                                //Debug.Log("DIFFERENT coord=  "+chunksToSetInactive[i].x+", "+chunksToSetInactive[i].y+", "+chunksToSetInactive[i].z+"    i=  "+i+"  T=  "+T+c.intVector3ToVector3());
                         }
+                        //T++;
                     }
+                    //else
+                        //Debug.Log("OUT");
+                    //Debug.Log("T=  "+T);
+                    Debug.Log("END_STATE [2,9,5]:  "+ ( (chunks[2,9,5]==null) ? -1 : (chunks[2, 9, 5].isActive ? 0 : 1)));
                 }
             }
         }
 
-        foreach(intVector3 c in inactiveChunks){
-            for(int i=0; i<activeChunks.Count; i++){
-                if(activeChunks[i]==c)
-                    activeChunks.RemoveAt(i);
-            }
-            
-            chunks[c.x, c.y, c.z].isActive=false;
-            //Debug.Log("set to inactive : "+c.x+", "+c.y+", "+c.z+")");
-        }
+        foreach(intVector3 c in chunksToSetInactive){
 
+            if(chunks[c.x, c.y, c.z]==null){
+                Debug.Log("created before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
+                chunks[c.x, c.y, c.z]=new Chunk(c, this);
+                for(int i=0; i<chunksToCreate.Count; i++){
+                    if(chunksToCreate[i].x==c.x && chunksToCreate[i].y==c.y && chunksToCreate[i].z==c.z){
+                        chunksToCreate.RemoveAt(i);
+                        Debug.Log("removed from ToCreate list before being set inactive : "+c.x+", "+c.y+", "+c.z+")");
+                    }
+                }
+            }
+            Debug.Log("STATE:  "+chunks[c.x, c.y, c.z].isActive+"  set to inactive : "+c.x+", "+c.y+", "+c.z+")");
+            chunks[c.x, c.y, c.z].isActive=false;
+            Debug.Log("STATE:  "+chunks[c.x, c.y, c.z].isActive+"  set to inactive : "+c.x+", "+c.y+", "+c.z+")");
+        }
     }
 
     public bool IsChunkInWorld(int xChunk, int yChunk, int zChunk)
@@ -170,12 +192,18 @@ public class Planet : MonoBehaviour
         }
     }
 
+    public Chunk getChunkFromVector3(Vector3 pos)
+    {
+        intVector3 chunkCoord = GetChunkCoordFromPos(pos);
+        return chunks[chunkCoord.x,chunkCoord.y,chunkCoord.z];
+    }
+
     public void DestroyVoxel(Vector3 pos)
     {
-        intVector3 posChunk=GetintVector3FromPos(pos);
-        intVector3 posVoxelInChunk=GetVoxelCoordRelativeToChunk(pos, posChunk);
+        intVector3 chunkCoord=GetChunkCoordFromPos(pos);
+        intVector3 posVoxelInChunk=GetVoxelCoordRelativeToChunk(pos, chunkCoord);
         
-        chunks[posChunk.x,posChunk.y,posChunk.z].EditChunk(posVoxelInChunk, 0);//air
+        chunks[chunkCoord.x,chunkCoord.y,chunkCoord.z].EditVoxel(posVoxelInChunk, 0);//air
 
         /*
         if(chunks[posChunk.x,posChunk.y,posChunk.z]!=null){
@@ -207,7 +235,7 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public int CheckVoxelTypeIndex(Vector3 pos)
+    public byte CheckVoxelTypeIndex(Vector3 pos)
     {
         if(IsVoxelInPlanet(pos))
         {
@@ -227,7 +255,10 @@ public class Planet : MonoBehaviour
             z-=zChunk*Data.chunkWidth;
             //Debug.Log("x, y, z=  "+x+", "+y+", "+z+"      xC, yC, zC =  "+xChunk+", "+yChunk+", "+zChunk+"      planetTotalPlanetDiameterInChunks=  "+planetTotalPlanetDiameterInChunks);
             //Debug.Log("CHUNK VM =  "+chunks[xChunk, yChunk, zChunk].voxelsMap[x,y,z]);
-            return chunks[xChunk, yChunk, zChunk].voxelsMap[x,y,z];
+            if(chunks[xChunk, yChunk, zChunk]!=null)
+                return chunks[xChunk, yChunk, zChunk].voxelsMap[x,y,z];
+            else
+                return getVoxel(pos);
         }
         else
             return 0; // It's air since it's out of the planet
@@ -642,6 +673,11 @@ public class intVector3
         x=_x;
         y=_y;
         z=_z;
+    }
+
+    public Vector3 intVector3ToVector3()
+    {
+        return new Vector3(x,y,z);
     }
 }
 
