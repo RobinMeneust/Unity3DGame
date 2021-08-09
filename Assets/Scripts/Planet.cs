@@ -4,27 +4,18 @@ using UnityEngine;
 
 public class Planet : MonoBehaviour
 {
-    [System.NonSerialized]
-    public int planetGroundRadiusInChunks = 4;
-    [System.NonSerialized]
-    public int planetMaxHeightRadiusInBlocks = 4;
-    [System.NonSerialized]
-    public int planetTotalPlanetRadiusInChunks;
-    [System.NonSerialized]
-    public int planetTotalPlanetRadiusInBlocks;
-    [System.NonSerialized]
-    public int planetTotalPlanetDiameterInChunks;
-    [System.NonSerialized]
-    public int planetTotalPlanetDiameterInBlocks;
-    [System.NonSerialized]
-    public int planetGroundDiameterInChunks;
-    [System.NonSerialized]
-    public int planetGroundDiameterInBlocks;
-    [System.NonSerialized]
-    public int planetGroundRadiusInBlocks;
-    [System.NonSerialized]
-    public Vector3 planetCoreCoord;
+    private int planetGroundRadiusInChunks = 2;
+    private int planetMaxHeightRadiusInBlocks = 4;
+    private int planetTotalPlanetRadiusInChunks;
+    private int planetTotalPlanetRadiusInBlocks;
+    private int planetTotalPlanetDiameterInChunks;
+    private int planetTotalPlanetDiameterInBlocks;
+    private int planetGroundDiameterInChunks;
+    private int planetGroundDiameterInBlocks;
+    private int planetGroundRadiusInBlocks;
+    private Vector3 planetCoreCoord;
     
+    private float planetRotationSpeed=8f;
     private Chunk[,,] chunks;
     public Material material;
     public Player player;
@@ -33,7 +24,7 @@ public class Planet : MonoBehaviour
     public int seed;
     private List<intVector3> activeChunks = new List<intVector3>();
     private List<intVector3> chunksToCreate = new List<intVector3>();
-    private int viewDistance=2;
+    private int viewDistance=10;
     public BlockTypes[] blockTypes;
     private intVector3 lastPlayerChunkPos;
     private intVector3 playerChunkPos;
@@ -79,6 +70,10 @@ public class Planet : MonoBehaviour
 
         if (chunksToCreate.Count>0 && !isCreatingChunks)
             StartCoroutine(CreateChunks());
+    }
+
+    void FixedUpdate() {
+        transform.RotateAround(planetCoreCoord, Vector3.up, planetRotationSpeed*Time.fixedDeltaTime);
     }
 
     public intVector3 GetChunkCoordFromPos(Vector3 pos)
@@ -218,6 +213,8 @@ public class Planet : MonoBehaviour
         */
     }
 
+
+/*
     private void GeneratePlanet()
     {
         int boundMin = planetTotalPlanetRadiusInChunks-viewDistance;
@@ -228,6 +225,23 @@ public class Planet : MonoBehaviour
             for(int y=boundMinY; y<planetTotalPlanetDiameterInChunks; y++)
             {
                 for(int z=boundMin; z<=boundMax; z++)
+                {
+                    if(IsChunkInWorld(x,y,z)){
+                        chunks[x,y,z] = new Chunk(new intVector3(x,y,z), this);
+                        activeChunks.Add(new intVector3(x,y,z));
+                    }
+                }
+            }
+        }
+    }
+*/
+    private void GeneratePlanet()
+    {
+        for(int x=0; x<=planetTotalPlanetDiameterInBlocks; x++)
+        {
+            for(int y=0; y<planetTotalPlanetDiameterInChunks; y++)
+            {
+                for(int z=0; z<=planetTotalPlanetDiameterInChunks; z++)
                 {
                     if(IsChunkInWorld(x,y,z)){
                         chunks[x,y,z] = new Chunk(new intVector3(x,y,z), this);

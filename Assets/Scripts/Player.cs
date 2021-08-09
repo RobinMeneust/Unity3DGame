@@ -6,6 +6,7 @@ public class Player : MonoBehaviour
 {
     public Transform cam;
     public Planet planet;
+    public GameObject debugMenu;
 
     private float gravity=-9.8f;
     private float verticalAcceleration=0;
@@ -25,6 +26,7 @@ public class Player : MonoBehaviour
     private float playerWidthRadius=0.15f;
     private float playerHeight=1.8f;
     private float playerHeigthWhenLyingDown=0.8f;
+    private float currentPlayerHeight=1.8f;
     private float jumpImpulse=5f;
     private float maxFreeFallSpeed=100f;
     private Vector3 lastGravityDirection=Vector3.down;
@@ -40,39 +42,46 @@ public class Player : MonoBehaviour
 
     private bool isLookingAtBlock=false;
 
-    Vector3 forwardVectorPlayer=Vector3.forward;
-    Vector3 backwardVectorPlayer=Vector3.back;
-    Vector3 upVectorPlayer=Vector3.up;
-    Vector3 downVectorPlayer=Vector3.down;
-    Vector3 rightVectorPlayer=Vector3.right;
-    Vector3 leftVectorPlayer=Vector3.left;
+    private Vector3 forwardVectorPlayer=Vector3.forward;
+    private Vector3 backwardVectorPlayer=Vector3.back;
+    private Vector3 upVectorPlayer=Vector3.up;
+    private Vector3 downVectorPlayer=Vector3.down;
+    private Vector3 rightVectorPlayer=Vector3.right;
+    private Vector3 leftVectorPlayer=Vector3.left;
+
+    private Vector3 forwardVectorPlayerLocal=Vector3.forward;
+    private Vector3 backwardVectorPlayerLocal=Vector3.back;
+    private Vector3 upVectorPlayerLocal=Vector3.up;
+    private Vector3 downVectorPlayerLocal=Vector3.down;
+    private Vector3 rightVectorPlayerLocal=Vector3.right;
+    private Vector3 leftVectorPlayerLocal=Vector3.left;
+
+    private InventorySlots[] inventory = new InventorySlots[20];
 
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
         isOnGround = true;
-        facePlanet = planet.checkPlanetFacePlayer(transform.position);
-        cam.position=transform.position + upVectorPlayer*playerHeight;
+        facePlanet = planet.checkPlanetFacePlayer(transform.localPosition);
+        cam.position=transform.position + upVectorPlayer*currentPlayerHeight;
     }
 
     private void FixedUpdate() 
     {
-        facePlanet = planet.checkPlanetFacePlayer(transform.position);
+        facePlanet = planet.checkPlanetFacePlayer(transform.localPosition);
         if(facePlanet!=lastFacePlanet){//changing face
             //Debug.Log("old face=  "+lastFacePlanet+"      new face=  "+facePlanet);
             //gravityDirection = getGravityDirectionFromFace(facePlanet, gravityDirection);
             //transform.Rotate(Vector3.RotateTowards(lastGravityDirection, gravityDirection, 1.8f, 0.0f));
             
-            changePlayerVectors();
+            
             lastFacePlanet=facePlanet;
         }
+        changePlayerVectorsLocal();
+        changePlayerVectors();
         GetVelocity();
 
-        if(isLyingDown)
-            cam.position=transform.position + upVectorPlayer*playerHeigthWhenLyingDown;
-        else
-            cam.position=transform.position + upVectorPlayer*playerHeight;
-
+        cam.position=transform.position + upVectorPlayer*currentPlayerHeight;
         Vector3 newUp=upVectorPlayer;
         Vector3 forward = transform.forward;
         Vector3 left = Vector3.Cross (forward,newUp);
@@ -86,12 +95,11 @@ public class Player : MonoBehaviour
     }
 
     private void Update() {
-        
         GetPlayerInputs();
         
         isLookingAtBlock=GetAimedBlock(out aimedBlockPos);
         if(isLookingAtBlock){
-            planet.highLightCube.transform.position = aimedBlockPos + new Vector3(0.5f,0.5f,0.5f);
+            planet.highLightCube.transform.localPosition = aimedBlockPos + new Vector3(0.5f,0.5f,0.5f);
             planet.highLightCube.SetActive(true);
         }
         else
@@ -99,7 +107,7 @@ public class Player : MonoBehaviour
 
         if(inside()){
             //transform.Translate(upVectorPlayer, Space.World);
-            Debug.LogError("IS INSIDE A BLOCK");
+            //Debug.LogError("IS INSIDE A BLOCK");
         }
 
         if(destroyRequest){
@@ -139,9 +147,11 @@ public class Player : MonoBehaviour
     {
         float step=0.5f;
         float distanceToBlock=0f;
+        Vector3 camForwardRelativeToPlanet;
 
         while(distanceToBlock<playerRange){
-            pos=cam.position+(cam.forward*distanceToBlock);
+            camForwardRelativeToPlanet = new Vector3(Vector3.Dot(cam.forward, planet.transform.right), Vector3.Dot(cam.forward, planet.transform.up), Vector3.Dot(cam.forward, planet.transform.forward));
+            pos=transform.localPosition+currentPlayerHeight*upVectorPlayerLocal+(camForwardRelativeToPlanet*distanceToBlock);
             if(planet.CheckVoxelMap(pos)){
                 pos.x=Mathf.FloorToInt(pos.x);
                 pos.y=Mathf.FloorToInt(pos.y);
@@ -175,6 +185,7 @@ public class Player : MonoBehaviour
         {
             jumpRequest=true;
         }
+
         if(Input.GetButtonDown("Sprint")){
             Debug.Log("SPRINT");
             isSprinting=!isSprinting;
@@ -184,10 +195,18 @@ public class Player : MonoBehaviour
             Debug.Log("Destroy");
             destroyRequest=true;
         }
-
         if(canStand() && isOnGround && Input.GetButtonDown("Prone"))
         {
             isLyingDown=!isLyingDown;
+            if(isLyingDown)
+                currentPlayerHeight=playerHeigthWhenLyingDown;
+            else
+                currentPlayerHeight=playerHeight;
+        }
+
+        if(Input.GetButtonDown("Debug Menu"))
+        {
+            debugMenu.SetActive(!debugMenu.activeSelf);
         }
     }
 
@@ -210,7 +229,7 @@ public class Player : MonoBehaviour
         else
             velocityTemp = ((transform.forward * vertical) + (transform.right * horizontal)) * Time.fixedDeltaTime*walkSpeed;
 
-        //if((Vector3.Distance(transform.position, planet.planetCoreCoord)-planet.planetRadiusInBlocks)<playerHeight){
+        //if((Vector3.Distance(transform.localPosition, planet.planetCoreCoord)-planet.planetRadiusInBlocks)<playerHeight){
         velocityRelativeToFace = new Vector3(Vector3.Dot(velocityTemp, rightVectorPlayer), Vector3.Dot(velocityTemp, upVectorPlayer), Vector3.Dot(velocityTemp, forwardVectorPlayer));
         //velocityRelativeToFace = Vector3.ProjectOnPlane(velocityTemp, upVectorPlayer);
         if(velocityRelativeToFace.y<maxFreeFallSpeed)
@@ -246,17 +265,13 @@ public class Player : MonoBehaviour
     }
 */
     private bool top(float verticalSpeed){
-        float heightCheck;
-        if(isLyingDown)
-            heightCheck=playerHeigthWhenLyingDown+0.2f;
-        else
-            heightCheck=playerHeight+0.2f;
+        float heightCheck=currentPlayerHeight+0.2f;
 
         if(
-            planet.CheckVoxelMap(upVectorPlayer*heightCheck + transform.position + (forwardVectorPlayer+leftVectorPlayer)*playerWidthRadius) || 
-            planet.CheckVoxelMap(upVectorPlayer*heightCheck + transform.position + (forwardVectorPlayer+rightVectorPlayer)*playerWidthRadius) ||
-            planet.CheckVoxelMap(upVectorPlayer*heightCheck + transform.position + (backwardVectorPlayer+leftVectorPlayer)*playerWidthRadius) ||
-            planet.CheckVoxelMap(upVectorPlayer*heightCheck + transform.position + (backwardVectorPlayer+rightVectorPlayer)*playerWidthRadius)
+            planet.CheckVoxelMap(upVectorPlayerLocal*heightCheck + transform.localPosition + (forwardVectorPlayerLocal+leftVectorPlayerLocal)*playerWidthRadius) || 
+            planet.CheckVoxelMap(upVectorPlayerLocal*heightCheck + transform.localPosition + (forwardVectorPlayerLocal+rightVectorPlayerLocal)*playerWidthRadius) ||
+            planet.CheckVoxelMap(upVectorPlayerLocal*heightCheck + transform.localPosition + (backwardVectorPlayerLocal+leftVectorPlayerLocal)*playerWidthRadius) ||
+            planet.CheckVoxelMap(upVectorPlayerLocal*heightCheck + transform.localPosition + (backwardVectorPlayerLocal+rightVectorPlayerLocal)*playerWidthRadius)
         )
         {
             return true;
@@ -269,10 +284,10 @@ public class Player : MonoBehaviour
 
     private bool bot(float verticalSpeed){
         if(
-            planet.CheckVoxelMap(transform.position + (forwardVectorPlayer+leftVectorPlayer)*playerWidthRadius + verticalSpeed*upVectorPlayer) || 
-            planet.CheckVoxelMap(transform.position + (forwardVectorPlayer+rightVectorPlayer)*playerWidthRadius + verticalSpeed*upVectorPlayer) ||
-            planet.CheckVoxelMap(transform.position + (backwardVectorPlayer+leftVectorPlayer)*playerWidthRadius + verticalSpeed*upVectorPlayer) ||
-            planet.CheckVoxelMap(transform.position + (backwardVectorPlayer+rightVectorPlayer)*playerWidthRadius + verticalSpeed*upVectorPlayer)
+            planet.CheckVoxelMap(transform.localPosition + (forwardVectorPlayerLocal+leftVectorPlayerLocal)*playerWidthRadius + verticalSpeed*upVectorPlayerLocal) || 
+            planet.CheckVoxelMap(transform.localPosition + (forwardVectorPlayerLocal+rightVectorPlayerLocal)*playerWidthRadius + verticalSpeed*upVectorPlayerLocal) ||
+            planet.CheckVoxelMap(transform.localPosition + (backwardVectorPlayerLocal+leftVectorPlayerLocal)*playerWidthRadius + verticalSpeed*upVectorPlayerLocal) ||
+            planet.CheckVoxelMap(transform.localPosition + (backwardVectorPlayerLocal+rightVectorPlayerLocal)*playerWidthRadius + verticalSpeed*upVectorPlayerLocal)
         )
         {
             isOnGround=true;
@@ -288,13 +303,13 @@ public class Player : MonoBehaviour
     private bool front(){
         bool condition=true;
         if(isLyingDown)
-            condition=planet.CheckVoxelMap(transform.position + forwardVectorPlayer*playerWidthRadius);
+            condition=planet.CheckVoxelMap(transform.localPosition + forwardVectorPlayerLocal*playerWidthRadius);
         else
-            condition=planet.CheckVoxelMap(transform.position + forwardVectorPlayer*playerWidthRadius) || planet.CheckVoxelMap(transform.position + forwardVectorPlayer*playerWidthRadius+upVectorPlayer);
+            condition=planet.CheckVoxelMap(transform.localPosition + forwardVectorPlayerLocal*playerWidthRadius) || planet.CheckVoxelMap(transform.localPosition + forwardVectorPlayerLocal*playerWidthRadius+upVectorPlayerLocal);
 
         if(condition)
         {
-            
+            //Debug.Log("front");
             return true;
         }
         else
@@ -306,12 +321,13 @@ public class Player : MonoBehaviour
     private bool back(){
         bool condition=true;
         if(isLyingDown)
-            condition=planet.CheckVoxelMap(transform.position + backwardVectorPlayer*playerWidthRadius);
+            condition=planet.CheckVoxelMap(transform.localPosition + backwardVectorPlayerLocal*playerWidthRadius);
         else
-            condition=planet.CheckVoxelMap(transform.position + backwardVectorPlayer*playerWidthRadius) || planet.CheckVoxelMap(transform.position + backwardVectorPlayer*playerWidthRadius+upVectorPlayer);
+            condition=planet.CheckVoxelMap(transform.localPosition + backwardVectorPlayerLocal*playerWidthRadius) || planet.CheckVoxelMap(transform.localPosition + backwardVectorPlayerLocal*playerWidthRadius+upVectorPlayerLocal);
 
         if(condition)
         {
+            //Debug.Log("back");
             return true;
         }
         else
@@ -323,12 +339,13 @@ public class Player : MonoBehaviour
     private bool right(){
         bool condition=true;
         if(isLyingDown)
-            condition=planet.CheckVoxelMap(transform.position + rightVectorPlayer*playerWidthRadius);
+            condition=planet.CheckVoxelMap(transform.localPosition + rightVectorPlayerLocal*playerWidthRadius);
         else
-            condition=planet.CheckVoxelMap(transform.position + rightVectorPlayer*playerWidthRadius) || planet.CheckVoxelMap(transform.position + rightVectorPlayer*playerWidthRadius+upVectorPlayer);
+            condition=planet.CheckVoxelMap(transform.localPosition + rightVectorPlayerLocal*playerWidthRadius) || planet.CheckVoxelMap(transform.localPosition + rightVectorPlayerLocal*playerWidthRadius+upVectorPlayerLocal);
 
         if(condition)
         {
+            //Debug.Log("right | 0-bool: "+planet.CheckVoxelMap(transform.localPosition + rightVectorPlayerLocal*playerWidthRadius)+"    0-type:  "+planet.CheckVoxelTypeIndex(transform.localPosition + rightVectorPlayerLocal*playerWidthRadius));
             return true;
         }
         else
@@ -340,12 +357,13 @@ public class Player : MonoBehaviour
     private bool left(){
         bool condition=true;
         if(isLyingDown)
-            condition=planet.CheckVoxelMap(transform.position + leftVectorPlayer*playerWidthRadius);
+            condition=planet.CheckVoxelMap(transform.localPosition + leftVectorPlayerLocal*playerWidthRadius);
         else
-            condition=planet.CheckVoxelMap(transform.position + leftVectorPlayer*playerWidthRadius) || planet.CheckVoxelMap(transform.position + leftVectorPlayer*playerWidthRadius+upVectorPlayer);
+            condition=planet.CheckVoxelMap(transform.localPosition + leftVectorPlayerLocal*playerWidthRadius) || planet.CheckVoxelMap(transform.localPosition + leftVectorPlayerLocal*playerWidthRadius+upVectorPlayerLocal);
 
         if(condition)
         {
+            //Debug.Log("left");
             return true;
         }
         else
@@ -357,12 +375,13 @@ public class Player : MonoBehaviour
     private bool inside(){
         bool condition=true;
         if(isLyingDown)
-            condition=planet.CheckVoxelMap(transform.position);
+            condition=planet.CheckVoxelMap(transform.localPosition);
         else
-            condition=planet.CheckVoxelMap(transform.position) || planet.CheckVoxelMap(transform.position + upVectorPlayer);
+            condition=planet.CheckVoxelMap(transform.localPosition) || planet.CheckVoxelMap(transform.localPosition + upVectorPlayerLocal);
 
         if(condition)
         {
+            //Debug.Log("inside");
             return true;
         }
         else
@@ -373,9 +392,10 @@ public class Player : MonoBehaviour
 
     private bool canStand()
     {
-        if(planet.CheckVoxelMap(transform.position + upVectorPlayer))
+        if(planet.CheckVoxelMap(transform.localPosition + upVectorPlayerLocal))
         {
             isLyingDown=true;
+            currentPlayerHeight=playerHeigthWhenLyingDown;
             return false;
         }
         else
@@ -388,60 +408,136 @@ public class Player : MonoBehaviour
     {
         switch(facePlanet){
             case 0: {
-                forwardVectorPlayer=Vector3.forward;
-                backwardVectorPlayer=Vector3.back;
-                upVectorPlayer=Vector3.left;
-                downVectorPlayer=Vector3.right;
-                rightVectorPlayer=Vector3.up;
-                leftVectorPlayer=Vector3.down;
+                forwardVectorPlayer=planet.transform.forward;
+                backwardVectorPlayer=-planet.transform.forward;
+                upVectorPlayer=-planet.transform.right;
+                downVectorPlayer=planet.transform.right;
+                rightVectorPlayer=planet.transform.up;
+                leftVectorPlayer=-planet.transform.up;
                 break;
             }
             case 1: {
-                forwardVectorPlayer=Vector3.forward;
-                backwardVectorPlayer=Vector3.back;
-                upVectorPlayer=Vector3.right;
-                downVectorPlayer=Vector3.left;
-                rightVectorPlayer=Vector3.up;
-                leftVectorPlayer=Vector3.down;
+                forwardVectorPlayer=planet.transform.forward;
+                backwardVectorPlayer=-planet.transform.forward;
+                upVectorPlayer=planet.transform.right;
+                downVectorPlayer=-planet.transform.right;
+                rightVectorPlayer=planet.transform.up;
+                leftVectorPlayer=-planet.transform.up;
                 break;
             }
             case 2: {
-                forwardVectorPlayer=Vector3.forward;
-                backwardVectorPlayer=Vector3.back;
-                upVectorPlayer=Vector3.down;
-                downVectorPlayer=Vector3.up;
-                rightVectorPlayer=Vector3.left;
-                leftVectorPlayer=Vector3.right;
+                forwardVectorPlayer=planet.transform.forward;
+                backwardVectorPlayer=-planet.transform.forward;
+                upVectorPlayer=-planet.transform.up;
+                downVectorPlayer=planet.transform.up;
+                rightVectorPlayer=-planet.transform.right;
+                leftVectorPlayer=planet.transform.right;
                 break;
             }
             case 3: {
-                forwardVectorPlayer=Vector3.forward;
-                backwardVectorPlayer=Vector3.back;
-                upVectorPlayer=Vector3.up;
-                downVectorPlayer=Vector3.down;
-                rightVectorPlayer=Vector3.right;
-                leftVectorPlayer=Vector3.left;
+                forwardVectorPlayer=planet.transform.forward;
+                backwardVectorPlayer=-planet.transform.forward;
+                upVectorPlayer=planet.transform.up;
+                downVectorPlayer=-planet.transform.up;
+                rightVectorPlayer=planet.transform.right;
+                leftVectorPlayer=-planet.transform.right;
                 break;
             }
             case 4: {
-                forwardVectorPlayer=Vector3.up;
-                backwardVectorPlayer=Vector3.down;
-                upVectorPlayer=Vector3.back;
-                downVectorPlayer=Vector3.forward;
-                rightVectorPlayer=Vector3.right;
-                leftVectorPlayer=Vector3.left;
+                forwardVectorPlayer=planet.transform.up;
+                backwardVectorPlayer=-planet.transform.up;
+                upVectorPlayer=-planet.transform.forward;
+                downVectorPlayer=planet.transform.forward;
+                rightVectorPlayer=planet.transform.right;
+                leftVectorPlayer=-planet.transform.right;
                 break;
             }
             case 5: {
-                forwardVectorPlayer=Vector3.down;
-                backwardVectorPlayer=Vector3.up;
-                upVectorPlayer=Vector3.forward;
-                downVectorPlayer=Vector3.back;
-                rightVectorPlayer=Vector3.right;
-                leftVectorPlayer=Vector3.left;
+                forwardVectorPlayer=-planet.transform.up;
+                backwardVectorPlayer=planet.transform.up;
+                upVectorPlayer=planet.transform.forward;
+                downVectorPlayer=-planet.transform.forward;
+                rightVectorPlayer=planet.transform.right;
+                leftVectorPlayer=-planet.transform.right;
                 break;
             }
             default : Debug.Log("ERROR : (in changePlayerVectors) Face value incorrect"); break;
         }
+    }
+
+    private void changePlayerVectorsLocal()
+    {
+        switch(facePlanet){
+            case 0: {
+                forwardVectorPlayerLocal=Vector3.forward;
+                backwardVectorPlayerLocal=Vector3.back;
+                upVectorPlayerLocal=Vector3.left;
+                downVectorPlayerLocal=Vector3.right;
+                rightVectorPlayerLocal=Vector3.up;
+                leftVectorPlayerLocal=Vector3.down;
+                break;
+            }
+            case 1: {
+                forwardVectorPlayerLocal=Vector3.forward;
+                backwardVectorPlayerLocal=Vector3.back;
+                upVectorPlayerLocal=Vector3.right;
+                downVectorPlayerLocal=Vector3.left;
+                rightVectorPlayerLocal=Vector3.up;
+                leftVectorPlayerLocal=Vector3.down;
+                break;
+            }
+            case 2: {
+                forwardVectorPlayerLocal=Vector3.forward;
+                backwardVectorPlayerLocal=Vector3.back;
+                upVectorPlayerLocal=Vector3.down;
+                downVectorPlayerLocal=Vector3.up;
+                rightVectorPlayerLocal=Vector3.left;
+                leftVectorPlayerLocal=Vector3.right;
+                break;
+            }
+            case 3: {
+                forwardVectorPlayerLocal=Vector3.forward;
+                backwardVectorPlayerLocal=Vector3.back;
+                upVectorPlayerLocal=Vector3.up;
+                downVectorPlayerLocal=Vector3.down;
+                rightVectorPlayerLocal=Vector3.right;
+                leftVectorPlayerLocal=Vector3.left;
+                break;
+            }
+            case 4: {
+                forwardVectorPlayerLocal=Vector3.up;
+                backwardVectorPlayerLocal=Vector3.down;
+                upVectorPlayerLocal=Vector3.back;
+                downVectorPlayerLocal=Vector3.forward;
+                rightVectorPlayerLocal=Vector3.right;
+                leftVectorPlayerLocal=Vector3.left;
+                break;
+            }
+            case 5: {
+                forwardVectorPlayerLocal=Vector3.down;
+                backwardVectorPlayerLocal=Vector3.up;
+                upVectorPlayerLocal=Vector3.forward;
+                downVectorPlayerLocal=Vector3.back;
+                rightVectorPlayerLocal=Vector3.right;
+                leftVectorPlayerLocal=Vector3.left;
+                break;
+            }
+            default : Debug.Log("ERROR : (in changePlayerVectorsLocal) Face value incorrect"); break;
+        }
+    }
+}
+
+public class InventorySlots
+{
+    private int m_itemID;
+    private int m_itemAmount;
+    private string m_itemName;
+    private Sprite m_icon;
+
+    public InventorySlots(int itemID=0, int itemAmount=0)
+    {
+        m_itemID=itemID;
+        m_itemAmount=itemAmount;
+        m_itemName="Name";
     }
 }
