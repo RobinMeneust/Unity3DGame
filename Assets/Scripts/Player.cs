@@ -9,7 +9,6 @@ public class Player : MonoBehaviour
     public GameObject debugMenu;
 
     private float gravity=-9.8f;
-    private float verticalAcceleration=0;
     private bool jumpRequest=false;
     private bool destroyRequest=false;
 
@@ -22,6 +21,7 @@ public class Player : MonoBehaviour
     private float mouseSensibility=350;
     private Vector3 velocityTemp=Vector3.zero;
     private Vector3 velocityRelativeToFace=Vector3.zero;
+    private Vector3 accelerationVectorRelativeToFace=Vector3.zero;
     private bool isOnGround;
     private float playerWidthRadius=0.15f;
     private float playerHeight=1.8f;
@@ -29,8 +29,7 @@ public class Player : MonoBehaviour
     private float currentPlayerHeight=1.8f;
     private float jumpImpulse=5f;
     private float maxFreeFallSpeed=100f;
-    private Vector3 lastGravityDirection=Vector3.down;
-    //private Vector3 gravityDirection=Vector3.down;
+    private Vector3 gravityVector;
     private int facePlanet=0;
     private int lastFacePlanet=0;
     private bool isLyingDown=false;
@@ -79,6 +78,7 @@ public class Player : MonoBehaviour
         }
         changePlayerVectorsLocal();
         changePlayerVectors();
+        gravityVector = Vector3.Normalize(transform.position-planet.planetCoreCoord)*gravity;
         GetVelocity();
 
         cam.position=transform.position + upVectorPlayer*currentPlayerHeight;
@@ -212,9 +212,9 @@ public class Player : MonoBehaviour
 
     public void Jump(){
         Debug.Log("JUMP");
-        verticalAcceleration = jumpImpulse;
         jumpRequest=false;
         isOnGround=false;
+        accelerationVectorRelativeToFace.y += jumpImpulse;
     }
 
     private void GetVelocity()
@@ -222,26 +222,33 @@ public class Player : MonoBehaviour
         if(jumpRequest)
             Jump();
 
-        verticalAcceleration+=Time.fixedDeltaTime*gravity;
-
         if(isSprinting)
             velocityTemp = ((transform.forward * vertical) + (transform.right * horizontal)) * Time.fixedDeltaTime*sprintSpeed;
         else
             velocityTemp = ((transform.forward * vertical) + (transform.right * horizontal)) * Time.fixedDeltaTime*walkSpeed;
 
         //if((Vector3.Distance(transform.localPosition, planet.planetCoreCoord)-planet.planetRadiusInBlocks)<playerHeight){
+        if(velocityRelativeToFace.y<maxFreeFallSpeed){
+            if(isOnGround)
+                accelerationVectorRelativeToFace+= new Vector3(0, Vector3.Dot(Time.fixedDeltaTime*gravityVector, upVectorPlayer), 0);
+            else
+                accelerationVectorRelativeToFace+= new Vector3(Vector3.Dot(Time.fixedDeltaTime*gravityVector, rightVectorPlayer), Vector3.Dot(Time.fixedDeltaTime*gravityVector, upVectorPlayer), Vector3.Dot(Time.fixedDeltaTime*gravityVector, forwardVectorPlayer));;
+        }
+            
+
         velocityRelativeToFace = new Vector3(Vector3.Dot(velocityTemp, rightVectorPlayer), Vector3.Dot(velocityTemp, upVectorPlayer), Vector3.Dot(velocityTemp, forwardVectorPlayer));
+        velocityRelativeToFace+=accelerationVectorRelativeToFace*Time.fixedDeltaTime;
+
+        
         //velocityRelativeToFace = Vector3.ProjectOnPlane(velocityTemp, upVectorPlayer);
-        if(velocityRelativeToFace.y<maxFreeFallSpeed)
-            velocityRelativeToFace += Vector3.up*verticalAcceleration*Time.fixedDeltaTime;
 
         if(velocityRelativeToFace.y>0 && top(velocityRelativeToFace.y)){
             velocityRelativeToFace.y=0;
-            verticalAcceleration=0;
+            accelerationVectorRelativeToFace=Vector3.zero;
         }
         if(velocityRelativeToFace.y<0 && bot(velocityRelativeToFace.y)){
             velocityRelativeToFace.y=0;
-            verticalAcceleration=0;
+            accelerationVectorRelativeToFace=Vector3.zero;
         }
         if((left() && velocityRelativeToFace.x<0) || (right() && velocityRelativeToFace.x>0)){
             velocityRelativeToFace.x=0;

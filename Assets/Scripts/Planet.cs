@@ -13,7 +13,9 @@ public class Planet : MonoBehaviour
     private int planetGroundDiameterInChunks;
     private int planetGroundDiameterInBlocks;
     private int planetGroundRadiusInBlocks;
-    private Vector3 planetCoreCoord;
+    
+    [System.NonSerialized]
+    public Vector3 planetCoreCoord;
     
     private float planetRotationSpeed=8f;
     private Chunk[,,] chunks;
