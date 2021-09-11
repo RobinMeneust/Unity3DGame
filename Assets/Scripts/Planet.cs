@@ -17,7 +17,7 @@ public class Planet : MonoBehaviour
     [System.NonSerialized]
     public Vector3 planetCoreCoord;
     
-    private float planetRotationSpeed=8f;
+    private float planetRotationSpeed=5f;
     private Chunk[,,] chunks;
     public Material material;
     public Player player;
@@ -627,7 +627,7 @@ public class Planet : MonoBehaviour
                 if(distance.z>0)
                     return 5;
                 else
-                    return 1;
+                    return 4;
             }
         }
     }

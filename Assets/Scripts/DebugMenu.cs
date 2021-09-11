@@ -9,6 +9,7 @@ public class DebugMenu : MonoBehaviour
     public Planet planet;
     private int fps;
     private float timer=0;
+    private int facePlanet;
     // Start is called before the first frame update
     void Start()
     {
@@ -18,6 +19,8 @@ public class DebugMenu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        facePlanet=planet.checkPlanetFacePlayer(planet.player.transform.position);
+
         if(timer>1f){
             Vector3 pos=planet.player.transform.position;
             intVector3 chunkPos = planet.GetChunkCoordFromPos(pos);
@@ -26,6 +29,7 @@ public class DebugMenu : MonoBehaviour
             text.text="FPS: "+fps+"\n\n";
             text.text+="Position: "+pos.x+", "+pos.y+", "+pos.z+"\n";
             text.text+="Current chunk:"+chunkPos.x+", "+chunkPos.y+", "+chunkPos.z+"\n\n";
+            text.text+="Current face:"+facePlanet+"\n\n";
 
             timer=0;
         }
